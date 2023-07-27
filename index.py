@@ -3,12 +3,13 @@ from src.ai.fc import fc_list
 from src.ai.print import (
     ai_print,
     user_print,
-    error_print
+    error_print,
+    info_print
 )
 
 def welcome_text():
-    ai_print("shell_gf: shell chatbot for hackers")
-    ai_print(f"implemented functions list: {str(fc_list())}")
+    info_print("shell_gf: shell chatbot for hackers")
+    info_print(f"implemented functions list: {str(fc_list())}")
 
 welcome_text()
 while True:
