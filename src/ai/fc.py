@@ -1,11 +1,12 @@
 from typing import Optional
+from src.ai.print import ai_print
 
 def python_excuter(code: str) -> str:
     result = exec(code)
     return result
 
 def exit_shell(props, see_you_text: str):
-    print(see_you_text)
+    ai_print(see_you_text)
     exit(0)
 
 

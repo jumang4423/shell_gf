@@ -14,7 +14,10 @@ from src.ai.fc import (
 from src.ai.openai_init import (
     openai_client
 )
-
+# print
+from src.ai.print import (
+    ai_print,
+)
 # constants
 MAX_COV_ARR_LEN = 8 # more than this, summarization will be used
 MAX_COV_ARR_LEN_MARGIN = 8 # margin for summarization
@@ -83,7 +86,7 @@ Your answer should be short.
 
     # if cur_conv_mem >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN, summarize then append
     if len(cur_conv_mem) >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN:
-        print("** optimize memory... **")
+        ai_prints("** optimize memory... **")
         # get top MAX_COV_ARR_LEN_MARGIN from 0 to MAX_COV_ARR_LEN_MARGIN
         sum_arr = cur_conv_mem[:MAX_COV_ARR_LEN_MARGIN]
         summarized = summarize_arr(sum_arr)
@@ -143,12 +146,12 @@ Your answer should be short.
         collected_messages.append(chunk_message)
         content_ptr = chunk_message['content'] if 'content' in chunk_message else None
         if content_ptr:
-            print(content_ptr, end='', flush=True)
+            ai_print(content_ptr, flush=True, end='')
 
     # check fc
     if len(collected_function_name) > 0:
         function_response = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
-        print(f"{collected_function_name} called.")
+        ai_print(f"{collected_function_name} called.")
         collected_messages.append({
             'role': "function",
             'content': function_response,
