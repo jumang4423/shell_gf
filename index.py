@@ -9,8 +9,10 @@ def welcome_text():
 welcome_text()
 while True:
     user_prompt = input("> ")
-    print("* ", end="")
     try:
+        if len(user_prompt) == 0:
+            continue
+        print("* ", end="")
         step(user_prompt)
     except Exception as e:
         print(f"! Error: {e}")
