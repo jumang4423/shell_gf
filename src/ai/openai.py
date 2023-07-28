@@ -20,7 +20,7 @@ from src.ai.print import (
     info_print,
 )
 # constants
-MAX_COV_ARR_LEN = 8 # more than this, summarization will be used
+MAX_COV_ARR_LEN = 6 # more than this, summarization will be used
 MAX_COV_ARR_LEN_MARGIN = 8 # margin for summarization
 GPT_3 = 'gpt-3.5-turbo-16k'
 GPT_4 = 'gpt-4-0613'
@@ -123,7 +123,6 @@ Your answer should be short.
     response = openai_client.ChatCompletion.create(
         model=GPT_4,
         messages=messages,
-        temperature=0.0,
         stream=True,
         function_call="auto" if is_fc else "none",
         functions=function_struct
@@ -153,7 +152,7 @@ Your answer should be short.
     # check fc
     if len(collected_function_name) > 0:
         function_response = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
-        collected_messages.append({
+        cur_conv_mem.append({
             'role': "function",
             'content': function_response,
             "name": collected_function_name,

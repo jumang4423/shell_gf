@@ -1,17 +1,20 @@
-from src.ai.openai import step
-from src.ai.fc import fc_list
 from src.ai.print import (
     ai_print,
     user_print,
     error_print,
     info_print
 )
+from src.ai.fc import fc_list
 
 def welcome_text():
     info_print("shell_gf: shell chatbot for hackers")
     info_print(f"implemented functions list: {str(fc_list())}")
+    info_print("loading shell_gf...", end="", flush=True)
 
 welcome_text()
+
+from src.ai.openai import step
+print()
 while True:
     user_prompt = input("> ")
     try:

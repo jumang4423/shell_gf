@@ -1,17 +1,40 @@
 from typing import Optional
-from src.ai.print import ai_print
+import subprocess
+from src.ai.print import ai_print, info_print
+
+python_env = {}
 
 def python_excuter(code: str) -> str:
-    result = exec(code)
+    result = exec(code, python_env)
     return result
+
+
+def shell_excuter(command: str) -> str:
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    output, error = process.communicate()
+
+    if process.returncode != 0:
+        return error.decode("utf-8")
+    else:
+        return output.decode("utf-8")
+
 
 def exit_shell(props, see_you_text: str):
     ai_print(see_you_text)
     exit(0)
 
 
-def run_python_code(props, code: str):
-    code_output = python_excuter(code)
+def run_code(props, code: str, language: str):
+    info_print(f"code: {code}")
+    if language == "python":
+        code_output = python_excuter(code)
+    elif language == "shell":
+        code_output = shell_excuter(code)
+    code_output = f"""
+result of {code} in {language}:
+{code_output}
+    """
+
     return code_output
 
 function_mapping = {
@@ -21,10 +44,11 @@ function_mapping = {
             "see_you_text"
         ]
     },
-    'run_python_code': {
-        'function': run_python_code,
+    'run_code': {
+        'function': run_code,
         'args': [
-            "code"
+            "code",
+            "language"
         ]
     }
 }
@@ -45,18 +69,23 @@ function_struct = [
         "required": ["see_you_text"]
     },
     {
-        "name": "run_python_code",
-        "description": "Helpful when user wants to run python code and get output from repl.",
+        "name": "run_code",
+        "description": "Helpful when user wants to run python || shell code and get output from repl.",
         "parameters": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string",
                     "description": "python code to run. e.g. 3 + 3"
+                },
+                "language": {
+                    "type": "string",
+                    "description": "language to run. e.g. python, shell",
+                    "enum": ["python", "shell"]
                 }
             }
         },
-        "required": ["code"]
+        "required": ["code", "language"]
     }
 ]
 
