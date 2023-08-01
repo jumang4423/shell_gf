@@ -4,24 +4,28 @@ from src.ai.print import ai_print, info_print
 
 python_env = {}
 
-def python_excuter(code: str) -> str:
+SYSC_NONE = 0
+SYSC_EXIT = 1
+
+def python_excuter(code: str) -> (str, Optional[str]):
     result = exec(code, python_env)
-    return result
+    return result, SYSC_NONE
 
 
-def shell_excuter(command: str) -> str:
+def shell_excuter(command: str) -> (str, Optional[str]):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     output, error = process.communicate()
 
     if process.returncode != 0:
-        return error.decode("utf-8")
+        return error.decode("utf-8"), SYSC_NONE
     else:
-        return output.decode("utf-8")
+        return output.decode("utf-8"), SYSC_NONE
 
 
 def exit_shell(props, see_you_text: str):
     ai_print(see_you_text)
-    exit(0)
+    return "", SYSC_EXIT
+
 
 
 def run_code(props, code: str, language: str):
@@ -35,7 +39,7 @@ result of {code} in {language}:
 {code_output}
     """
 
-    return code_output
+    return code_output, SYSC_NONE
 
 function_mapping = {
     'exit': {

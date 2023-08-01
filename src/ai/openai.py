@@ -8,7 +8,8 @@ from src.ai.pinecone import (
 from src.ai.fc import (
     function_mapping,
     function_struct,
-    resolver
+    resolver,
+    SYSC_EXIT,
 )
 # openai
 from src.ai.openai_init import (
@@ -30,9 +31,7 @@ VDB_CACHE_PATH = './vdb_cache'
 cur_conv_mem = []
 
 
-
 def summarize_arr(conv_arr: list) -> str:
-    assert len(conv_arr) == MAX_COV_ARR_LEN_MARGIN
     """
     summarize conversation array
     """
@@ -66,6 +65,44 @@ def summarize_arr(conv_arr: list) -> str:
     return response_str
 
 
+def summarizer():
+    global cur_conv_mem
+    # if cur_conv_mem >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN, summarize then append
+    if len(cur_conv_mem) >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN:
+        info_print("** optimize memory... **")
+        # get top MAX_COV_ARR_LEN_MARGIN from 0 to MAX_COV_ARR_LEN_MARGIN
+        sum_arr = cur_conv_mem[:MAX_COV_ARR_LEN_MARGIN]
+        summarized = summarize_arr(sum_arr)
+        # remove first MAX_COV_ARR_LEN_MARGIN
+        cur_conv_mem = cur_conv_mem[MAX_COV_ARR_LEN_MARGIN:]
+        # append summarized to the first of cur_conv_mem
+        cur_conv_mem.insert(0, {
+            'role': 'assistant',
+            'content': summarized
+        })
+        # save to db
+        insert_to_pinecone(
+            summarized
+        )
+
+
+def exec_sysc(sysc):
+    if sysc == SYSC_EXIT:
+        on_exit()
+
+
+def on_exit():
+    info_print("** closing memory... **")
+    croped = cur_conv_mem[:-1]
+    summarized = summarize_arr(croped)
+    # save to db
+    insert_to_pinecone(
+        summarized
+    )
+    info_print("** memory saved. **")
+    exit()
+
+
 def step(user_prompt: str, is_fc=True) -> str:
     """
     step with user prompt
@@ -85,23 +122,7 @@ Your answer should be short.
         'content': user_prompt
     })
 
-    # if cur_conv_mem >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN, summarize then append
-    if len(cur_conv_mem) >= MAX_COV_ARR_LEN + MAX_COV_ARR_LEN_MARGIN:
-        info_print("** optimize memory... **")
-        # get top MAX_COV_ARR_LEN_MARGIN from 0 to MAX_COV_ARR_LEN_MARGIN
-        sum_arr = cur_conv_mem[:MAX_COV_ARR_LEN_MARGIN]
-        summarized = summarize_arr(sum_arr)
-        # remove first MAX_COV_ARR_LEN_MARGIN
-        cur_conv_mem = cur_conv_mem[MAX_COV_ARR_LEN_MARGIN:]
-        # append summarized to the first of cur_conv_mem
-        cur_conv_mem.insert(0, {
-            'role': 'assistant',
-            'content': summarized
-        })
-        # save to db
-        insert_to_pinecone(
-            summarized
-        )
+    summarizer()
 
     # recall from memory
     result = query_to_pinecone(
@@ -151,7 +172,8 @@ Your answer should be short.
 
     # check fc
     if len(collected_function_name) > 0:
-        function_response = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
+        function_response, sysc = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
+        exec_sysc(sysc)
         cur_conv_mem.append({
             'role': "function",
             'content': function_response,
