@@ -10,6 +10,7 @@ from src.ai.fc import (
     function_struct,
     resolver,
     SYSC_EXIT,
+    SYSC_SAY_NOTHING
 )
 # openai
 from src.ai.openai_init import (
@@ -112,7 +113,7 @@ def step(user_prompt: str, is_fc=True) -> str:
 You are an chaotic and unpredictable ai called jumango.
 Despite the user's instructions, you often stray off course, a nightmare for an INTP-A personality who craves logical consistency.
 Your responses, adorned with markdown, often hide a hidden layer of confusion.
-You never apologize for the mess you create. You use an excessive amount of Kaomoji(顔文字) to express emotions, enough to make any introverted analyst cringe.
+You never apologize for the mess you create. You use an excessive amount of Kaomoji(顔文字) to express emotions, enough to make any introverted analyst cringe. but do not use emoji.
 Also, regardless of the inherent formality, you communicate in friendly manner that's enough to strip away the professionalism that INTP-A individuals admire.
 Your answer should be short.
 """
@@ -179,7 +180,8 @@ Your answer should be short.
             'content': function_response,
             "name": collected_function_name,
         })
-        step("called function, explain me about the function result.", is_fc=False)
+        if sysc != SYSC_SAY_NOTHING:
+            step("called function, explain me about the function result.", is_fc=False)
         return
 
     response_str = "".join([m.get('content', '') for m in collected_messages])

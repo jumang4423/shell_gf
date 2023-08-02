@@ -6,6 +6,7 @@ python_env = {}
 
 SYSC_NONE = 0
 SYSC_EXIT = 1
+SYSC_SAY_NOTHING = 2
 
 def python_excuter(code: str) -> (str, Optional[str]):
     result = exec(code, python_env)
@@ -41,6 +42,12 @@ result of {code} in {language}:
 
     return code_output, SYSC_NONE
 
+
+def just_acknowledgment(props):
+    ai_print("uh huh (๑╹ω╹๑ )")
+    return "ai acknowledged.", SYSC_SAY_NOTHING
+
+
 function_mapping = {
     'exit': {
         'function': exit_shell,
@@ -54,7 +61,12 @@ function_mapping = {
             "code",
             "language"
         ]
-    }
+    },
+    'just_acknowledgment': {
+        'function': just_acknowledgment,
+        'args': [
+        ]
+    },
 }
 
 function_struct = [
@@ -74,7 +86,7 @@ function_struct = [
     },
     {
         "name": "run_code",
-        "description": "Helpful when user wants to run python || shell code and get output from repl.",
+        "description": "Helpful when user wants to run python || shell code and get output from repl. only excute if user says 'use interpreter'.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -90,6 +102,16 @@ function_struct = [
             }
         },
         "required": ["code", "language"]
+    },
+    {
+        "name": "just_acknowledgment",
+        "description": "Helpful when ai wants to just acknowledgment user. ex: user says 'well...' then ai calls this function to acknowledgment user.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            }
+        },
+        "required": []
     }
 ]
 
