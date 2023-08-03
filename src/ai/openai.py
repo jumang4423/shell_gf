@@ -174,13 +174,12 @@ Your answer should be short.
 
     # recall from memory
     recall_query = gen_recall_query()
-    comment_print(f"recall query: {recall_query}")
+    query = recall_query if recall_query else user_prompt
+    comment_print(f"recall query: {query}")
     result = query_to_pinecone(
-        recall_query
-    ) if recall_query else None
-
+        query
+    )
     comment_print(f"recall from memory: {result}")
-
     messages = [
         {
             'role': "system",
