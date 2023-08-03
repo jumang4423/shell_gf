@@ -28,7 +28,6 @@ def exit_shell(props, see_you_text: str):
     return "", SYSC_EXIT
 
 
-
 def run_code(props, code: str, language: str):
     info_print(f"code: {code}")
     if language == "python":
@@ -44,8 +43,7 @@ result of {code} in {language}:
 
 
 def just_acknowledgment(props):
-    ai_print("uh huh (๑╹ω╹๑ )")
-    return "ai acknowledged.", SYSC_SAY_NOTHING
+    return "ai acknowledged.",SYSC_SAY_NOTHING
 
 
 function_mapping = {

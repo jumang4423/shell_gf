@@ -163,7 +163,7 @@ Your answer should be short.
             function_args = chunk_message['function_call'].get('arguments', '')
             if len(function_name) > 0:
                 collected_function_name += chunk_message['function_call']['name']
-                info_print(f"calling {function_name}...")
+                info_print(f"{function_name}")
             if len(function_args) > 0:
                 collected_function_arguments_json_str += chunk_message['function_call']['arguments']
         collected_messages.append(chunk_message)
@@ -181,7 +181,7 @@ Your answer should be short.
             "name": collected_function_name,
         })
         if sysc != SYSC_SAY_NOTHING:
-            step("called function, explain me about the function result.", is_fc=False)
+            step("called function, now explain me about the function result.", is_fc=False)
         return
 
     response_str = "".join([m.get('content', '') for m in collected_messages])
