@@ -11,6 +11,11 @@ def user_print(text: str, flush: bool = False, end: str = "\n"):
 def info_print(text: str, end: str = "\n", flush: bool = False):
     print(Fore.light_blue + text + Style.reset, end=end, flush=flush)
 
+
+def comment_print(text: str, end: str = "\n", flush: bool = False):
+    # gray text with black background
+    print(Fore.dark_gray + text + Style.reset, end=end, flush=flush)
+
 def error_print(text: str, end: str = "\n"):
     # red text with black background
     print(Fore.RED + text + Style.reset, end=end)

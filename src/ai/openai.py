@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 # pinecone
 from src.ai.pinecone import (
     insert_to_pinecone,
@@ -20,6 +21,7 @@ from src.ai.openai_init import (
 from src.ai.print import (
     ai_print,
     info_print,
+    comment_print,
 )
 # constants
 MAX_COV_ARR_LEN = 6 # more than this, summarization will be used
@@ -104,6 +106,51 @@ def on_exit():
     exit()
 
 
+def gen_recall_query() -> Optional[str]:
+    """
+    based on conversation memory, generate a query to recall necessary memory
+    """
+    global cur_conv_mem
+    THIS_SYSTEM_PROMPT = f"""
+    based on given conversation of user and ai, ai make a recall query to memory.
+    query should be very short and clear.
+    ai returns a json format string following {{ query: string, is_query: bool }}.
+    <<example>>
+    <history>
+    user: hello
+    <ai recall query>
+    {{ query: "", is_query: false }}
+    user: based on my hobbies, what is my personality type?
+    <ai recall query>
+    {{ query: "users hobbies", is_query: true }}
+    <history>
+    user: last time we talked about autism, and now i feel like i disagree with previous conversation. how do you think about it?
+    <ai recall query>
+    {{ query: "about autism", is_query: true }}
+    """
+    messages = [
+        {
+            'role': "system",
+            'content': THIS_SYSTEM_PROMPT
+        },
+    ]
+    messages.extend(cur_conv_mem)
+    response = openai_client.ChatCompletion.create(
+        model=GPT_4,
+        messages=messages,
+    )
+    response_str = response.choices[0].message.content
+
+    try:
+       json_obj = json.loads(response_str)
+       if json_obj['is_query']:
+            return json_obj['query']
+       else:
+            return None
+    except:
+        return None
+
+
 def step(user_prompt: str, is_fc=True) -> str:
     """
     step with user prompt
@@ -126,9 +173,13 @@ Your answer should be short.
     summarizer()
 
     # recall from memory
+    recall_query = gen_recall_query()
+    comment_print(f"recall query: {recall_query}")
     result = query_to_pinecone(
-        user_prompt
-    )
+        recall_query
+    ) if recall_query else None
+
+    comment_print(f"recall from memory: {result}")
 
     messages = [
         {
