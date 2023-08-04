@@ -140,27 +140,28 @@ Your answer should be short.
     summarizer()
 
     # recall from memory
-    recall_query = gen_recall_query()
-    query = recall_query if recall_query else user_prompt
-    comment_print(f"recall query: {query}")
-    result = query_to_pinecone(
-        query
-    )
-    comment_print(f"recall from memory: {result}")
+    if is_fc:
+        recall_query = gen_recall_query()
+        query = recall_query if recall_query else user_prompt
+        comment_print(f"recall query: {query}")
+        result = query_to_pinecone(
+            query
+        )
+        comment_print(f"recall from memory: {result}")
     messages = [
         {
             'role': "system",
             'content': THIS_SYSTEM_PROMPT
         },
     ]
-    if result and is_fc:
+    if is_fc and result:
         messages.append({
             'role': 'assistant',
             'content': f"recall from memory: {result}"
         })
     messages.extend(cur_conv_mem)
     response = openai_client.ChatCompletion.create(
-        model=GPT_4,
+        model=GPT_3,
         messages=messages,
         stream=True,
         function_call="auto" if is_fc else "none",

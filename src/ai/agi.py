@@ -11,6 +11,7 @@ from src.ai.print import (
     ai_print,
     info_print,
     comment_print,
+    warning_print,
 )
 # pinecone
 from src.ai.pinecone import (
@@ -35,8 +36,7 @@ def welcome_agi(
     print out welcome message for agi
     """
     info_print("agi: artificial general intelligence")
-    info_print(f"agi: query '{query}'")
-    info_print(f"agi: epoch {epoch}")
+    info_print(f"agi: query '{query}', epoch {epoch}")
     info_print("agi: loading agi...")
 
     return
@@ -161,9 +161,12 @@ def answering_agi(
 def human_feedback_agi(query: str):
     info_print("agi: human feedback")
     info_print("agi: to improve agi result, please give me feedback.")
+    warning_print("agi: 'abort' to abort agi")
     user_feedback = input("> ")
     if user_feedback == "":
         return human_feedback_agi(query)
+    elif user_feedback == "abort":
+        raise Exception("agi aborted")
     else:
         return user_feedback
 
@@ -227,9 +230,20 @@ def save_to_db_agi(summary_str: str):
 
 
 def mem_arr_update_agi():
-    if len(agi_stack_mem) > MAX_STACK_ARR_LEN + MAX_STACK_ARR_LEN_MARGIN:
-        for i in range(MAX_STACK_ARR_LEN_MARGIN):
-            agi_stack_mem.pop(0)
+    global agi_stack_mem
+    # if agi_stack_mem >= MAX_STACK_ARR_LEN + MAX_STACK_ARR_LEN_MARGIN: then summarize
+    if len(agi_stack_mem) >= MAX_STACK_ARR_LEN + MAX_STACK_ARR_LEN_MARGIN:
+        info_print("** optimize memory... **")
+        # get top MAX_COV_ARR_LEN_MARGIN from 0 to MAX_COV_ARR_LEN_MARGIN
+        sum_arr = agi_stack_mem[:MAX_COV_ARR_LEN_MARGIN]
+        summarized = summarize_arr(sum_arr, GPT_3)
+        # remove first MAX_COV_ARR_LEN_MARGIN
+        agi_stack_mem = agi_stack_mem[MAX_COV_ARR_LEN_MARGIN:]
+        # append summarized to the first of cur_conv_mem
+        agi_stack_mem.insert(0, {
+            'role': 'assistant',
+            'content': summarized
+        })
 
 
 def run_agi(

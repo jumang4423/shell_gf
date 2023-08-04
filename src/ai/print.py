@@ -19,3 +19,7 @@ def comment_print(text: str, end: str = "\n", flush: bool = False):
 def error_print(text: str, end: str = "\n"):
     # red text with black background
     print(Fore.RED + text + Style.reset, end=end)
+
+def warning_print(text: str, end: str = "\n"):
+    # yellow text with black background
+    print(Fore.YELLOW + text + Style.reset, end=end)

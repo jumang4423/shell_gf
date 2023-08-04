@@ -157,6 +157,6 @@ def resolver(props, function_name: str, function_args: dict) -> Optional[str]:
         try:
             return function(props, **{arg: (function_args.get(arg)) for arg in args})
         except Exception as e:
-            return f"error occured: {e}"
+            return f"error occured: {e}", SYSC_NONE
     else:
         return None
