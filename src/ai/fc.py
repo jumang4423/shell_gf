@@ -124,7 +124,7 @@ function_struct = [
     },
     {
         "name": "run_agi",
-        "description": "Helpful when user wants to run agi and get output from agi. only excute if user says 'use agi'.",
+        "description": "Helpful when user wants to run agi and get output from agi. excute ONLY IF user says 'use agi' otherwise ai will not call this function.",
         "parameters": {
             "type": "object",
             "properties": {
