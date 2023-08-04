@@ -150,7 +150,6 @@ def answering_agi(
         )
         response_str = response.choices[0].message.content
         answer_arr.append(response_str)
-        info_print(f"agi: answer '{response_str} for question '{question_str}'")
 
     answer_str = f"agi generated new answers: {str(answer_arr)}"
     info_print(answer_str)
@@ -205,14 +204,11 @@ def summarization_agi(
     response_str = response.choices[0].message.content
     info_print(f"agi: summarization agi result: {response_str}")
 
-    agi_stack_mem.append({
-        'role': "user",
-        'content': f"question: {query}",
-    })
-    agi_stack_mem.append({
-        'role': "assistant",
-        'content': f"answer: {response_str}",
-    })
+    for i in range(len(question_arr)):
+        agi_stack_mem.append({
+            'role': "user",
+            'content': f"{answer_arr[i]} on {question_arr[i]}",
+        })
 
     return f"""
        based on the questions '{str(question_arr)}', {response_str}

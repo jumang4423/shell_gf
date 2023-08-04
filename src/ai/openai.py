@@ -153,7 +153,7 @@ Your answer should be short.
             'content': THIS_SYSTEM_PROMPT
         },
     ]
-    if result:
+    if result and is_fc:
         messages.append({
             'role': 'assistant',
             'content': f"recall from memory: {result}"
