@@ -161,7 +161,7 @@ Your answer should be short.
         })
     messages.extend(cur_conv_mem)
     response = openai_client.ChatCompletion.create(
-        model=GPT_3,
+        model=GPT_4,
         messages=messages,
         stream=True,
         function_call="auto" if is_fc else "none",
