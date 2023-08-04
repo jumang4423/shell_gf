@@ -15,7 +15,10 @@ from src.ai.fc import (
 )
 # openai
 from src.ai.openai_init import (
-    openai_client
+    openai_client,
+    GPT_3,
+    GPT_4,
+    summarize_arr,
 )
 # print
 from src.ai.print import (
@@ -26,46 +29,10 @@ from src.ai.print import (
 # constants
 MAX_COV_ARR_LEN = 6 # more than this, summarization will be used
 MAX_COV_ARR_LEN_MARGIN = 8 # margin for summarization
-GPT_3 = 'gpt-3.5-turbo-16k'
-GPT_4 = 'gpt-4-0613'
 VDB_CACHE_PATH = './vdb_cache'
 
 # state
 cur_conv_mem = []
-
-
-def summarize_arr(conv_arr: list) -> str:
-    """
-    summarize conversation array
-    """
-    THIS_SYSTEM_PROMPT = f"""
-    based on given conversation of user and ai, summarize the conversation.
-    but list up THREE important points, very short and clear.
-    <<example>>
-    <history>
-    user: why does dog bark?
-    ai: well, dog barks because it is a dog.
-    user: wtf
-    ai: what is wrong with you?
-    <ai summary>
-    - user asked why dog barks.
-    - ai said said nonsense.
-    - both user and ai got angry.
-    """
-    messages = [
-        {
-            'role': "system",
-            'content': THIS_SYSTEM_PROMPT
-        },
-    ]
-    messages.extend(conv_arr)
-    response = openai_client.ChatCompletion.create(
-        model=GPT_3,
-        messages=messages,
-    )
-    response_str = response.choices[0].message.content
-
-    return response_str
 
 
 def summarizer():
@@ -75,7 +42,7 @@ def summarizer():
         info_print("** optimize memory... **")
         # get top MAX_COV_ARR_LEN_MARGIN from 0 to MAX_COV_ARR_LEN_MARGIN
         sum_arr = cur_conv_mem[:MAX_COV_ARR_LEN_MARGIN]
-        summarized = summarize_arr(sum_arr)
+        summarized = summarize_arr(sum_arr, GPT_3)
         # remove first MAX_COV_ARR_LEN_MARGIN
         cur_conv_mem = cur_conv_mem[MAX_COV_ARR_LEN_MARGIN:]
         # append summarized to the first of cur_conv_mem
@@ -97,7 +64,7 @@ def exec_sysc(sysc):
 def on_exit():
     info_print("** closing memory... **")
     croped = cur_conv_mem[:-1]
-    summarized = summarize_arr(croped)
+    summarized = summarize_arr(croped, GPT_3)
     # save to db
     insert_to_pinecone(
         summarized

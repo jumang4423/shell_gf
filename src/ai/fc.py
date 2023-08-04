@@ -1,6 +1,7 @@
 from typing import Optional
 import subprocess
 from src.ai.print import ai_print, info_print
+from src.ai.agi import run_agi
 
 python_env = {}
 
@@ -30,16 +31,19 @@ def exit_shell(props, see_you_text: str):
 
 def run_code(props, code: str, language: str):
     info_print(f"code: {code}")
-    if language == "python":
-        code_output = python_excuter(code)
-    elif language == "shell":
-        code_output = shell_excuter(code)
-    code_output = f"""
+    try:
+        if language == "python":
+            code_output = python_excuter(code)
+        elif language == "shell":
+            code_output = shell_excuter(code)
+            code_output = f"""
 result of {code} in {language}:
 {code_output}
-    """
+            """
 
-    return code_output, SYSC_NONE
+        return code_output, SYSC_NONE
+    except Exception as e:
+        return f"error occured: {e}", SYSC_NONE
 
 
 def just_acknowledgment(props):
@@ -63,6 +67,13 @@ function_mapping = {
     'just_acknowledgment': {
         'function': just_acknowledgment,
         'args': [
+        ]
+    },
+    'run_agi': {
+        'function': run_agi,
+        'args': [
+            "query",
+            "epoch"
         ]
     },
 }
@@ -110,6 +121,24 @@ function_struct = [
             }
         },
         "required": []
+    },
+    {
+        "name": "run_agi",
+        "description": "Helpful when user wants to run agi and get output from agi. only excute if user says 'use agi'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "query to run. e.g. why is autism so rare?"
+                },
+                "epoch": {
+                    "type": "string",
+                    "description": "epoch to run. e.g. 3. default is 3, max is 10."
+                }
+            }
+        },
+        "required": ["query", "epoch"]
     }
 ]
 
@@ -125,6 +154,9 @@ def resolver(props, function_name: str, function_args: dict) -> Optional[str]:
             if arg not in function_args:
                 function_args[arg] = ""
 
-        return function(props, **{arg: (function_args.get(arg)) for arg in args})
+        try:
+            return function(props, **{arg: (function_args.get(arg)) for arg in args})
+        except Exception as e:
+            return f"error occured: {e}"
     else:
         return None
