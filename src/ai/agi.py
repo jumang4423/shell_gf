@@ -212,6 +212,10 @@ def summarization_agi(
         'content': f"new questions: {str(question_arr)}",
     })
     agi_stack_mem.append({
+        'role': "user",
+        'content': f"user feedback: {feedback_str}",
+    })
+    agi_stack_mem.append({
         'role': "assistant",
         'content': f"answer: {response_str}",
     })

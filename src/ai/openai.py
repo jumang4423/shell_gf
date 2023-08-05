@@ -1,4 +1,5 @@
 import json
+import copy
 from typing import Optional
 # pinecone
 from src.ai.pinecone import (
@@ -118,6 +119,17 @@ def gen_recall_query() -> Optional[str]:
         return None
 
 
+def assert_function_struct(function_struct: list[dict], user_prompt: str):
+    new_fs = copy.deepcopy(function_struct)
+    # run_agi
+    if 'agi' not in user_prompt.lower():
+        new_fs = list(filter(lambda x: x['name'] != 'run_agi', new_fs))
+
+    return new_fs
+
+
+
+
 def step(user_prompt: str, is_fc=True) -> str:
     """
     step with user prompt
@@ -160,12 +172,13 @@ Your answer should be short.
             'content': f"recall from memory: {result}"
         })
     messages.extend(cur_conv_mem)
+    assert_fs = assert_function_struct(function_struct, user_prompt)
     response = openai_client.ChatCompletion.create(
         model=GPT_4,
         messages=messages,
         stream=True,
         function_call="auto" if is_fc else "none",
-        functions=function_struct
+        functions=assert_fs,
     )
 
     collected_messages = []
