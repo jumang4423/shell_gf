@@ -3,19 +3,25 @@ import subprocess
 from src.ai.print import ai_print, info_print
 from src.ai.agi import run_agi
 
-python_env = {}
-
+python_env: dict = {}
 SYSC_NONE = 0
 SYSC_EXIT = 1
 SYSC_SAY_NOTHING = 2
 
+
 def python_excuter(code: str) -> (str, Optional[str]):
+    # TODO: real subprocess you know!
     result = exec(code, python_env)
     return result, SYSC_NONE
 
 
 def shell_excuter(command: str) -> (str, Optional[str]):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True
+    )
     output, error = process.communicate()
 
     if process.returncode != 0:
@@ -25,7 +31,6 @@ def shell_excuter(command: str) -> (str, Optional[str]):
 
 
 def exit_shell(props, see_you_text: str):
-    ai_print(see_you_text)
     return "", SYSC_EXIT
 
 

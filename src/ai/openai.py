@@ -27,6 +27,10 @@ from src.ai.print import (
     info_print,
     comment_print,
 )
+# elevenlabs
+from src.ai.elevenlabs_init import (
+    elevenlabs_client,
+)
 # constants
 MAX_COV_ARR_LEN = 6 # more than this, summarization will be used
 MAX_COV_ARR_LEN_MARGIN = 8 # margin for summarization
@@ -34,6 +38,9 @@ VDB_CACHE_PATH = './vdb_cache'
 
 # state
 cur_conv_mem = []
+collected_messages = []
+collected_function_name = ""
+collected_function_arguments_json_str = ""
 
 
 def summarizer():
@@ -128,13 +135,18 @@ def assert_function_struct(function_struct: list[dict], user_prompt: str):
     return new_fs
 
 
+def init_step_var():
+    global collected_messages, collected_function_name, collected_function_arguments_json_str
+    collected_messages = []
+    collected_function_name = ""
+    collected_function_arguments_json_str = ""
 
 
-def step(user_prompt: str, is_fc=True) -> str:
+def step(user_prompt: str, is_fc=True, is_speak=False) -> str:
     """
     step with user prompt
     """
-    global cur_conv_mem
+    global cur_conv_mem, collected_messages, collected_function_name, collected_function_arguments_json_str
     THIS_SYSTEM_PROMPT = f"""
 You are an chaotic INTP-A personality ai assistant called jumango.
 Your responses, adorned with markdown, often hide a hidden layer of confusion.
@@ -153,8 +165,7 @@ Your answer should be short.
 
     # recall from memory
     if is_fc:
-        recall_query = gen_recall_query()
-        query = recall_query if recall_query else user_prompt
+        query = user_prompt
         comment_print(f"recall query: {query}")
         result = query_to_pinecone(
             query
@@ -173,35 +184,52 @@ Your answer should be short.
         })
     messages.extend(cur_conv_mem)
     assert_fs = assert_function_struct(function_struct, user_prompt)
-    response = openai_client.ChatCompletion.create(
-        model=GPT_4,
-        messages=messages,
-        stream=True,
-        function_call="auto" if is_fc else "none",
-        functions=assert_fs,
-    )
 
-    collected_messages = []
-    collected_function_name = ""
-    collected_function_arguments_json_str = ""
-    for chunk in response:
-        finished_reason = chunk['choices'][0]['finish_reason']
-        if finished_reason == "function_call":
-            break
-        chunk_message = chunk['choices'][0]['delta']
-        if "function_call" in chunk_message:
-            function_name = chunk_message['function_call'].get('name', '')
-            function_args = chunk_message['function_call'].get('arguments', '')
-            if len(function_name) > 0:
-                collected_function_name += chunk_message['function_call']['name']
-                info_print(f"{function_name}")
-            if len(function_args) > 0:
-                collected_function_arguments_json_str += chunk_message['function_call']['arguments']
-        collected_messages.append(chunk_message)
-        content_ptr = chunk_message['content'] if 'content' in chunk_message else None
-        if content_ptr:
-            ai_print(content_ptr, flush=True, end='')
+    def gen():
+        global collected_messages, collected_function_name, collected_function_arguments_json_str
+        response = openai_client.ChatCompletion.create(
+            model=GPT_4,
+            messages=messages,
+            stream=True,
+            function_call="auto" if is_fc else "none",
+            functions=assert_fs,
+        )
+        for chunk in response:
+            finished_reason = chunk['choices'][0]['finish_reason']
+            if finished_reason == "function_call":
+                break
+            chunk_message = chunk['choices'][0]['delta']
+            if "function_call" in chunk_message:
+                function_name = chunk_message['function_call'].get('name', '')
+                function_args = chunk_message['function_call'].get('arguments', '')
+                if len(function_name) > 0:
+                    collected_function_name += chunk_message['function_call']['name']
+                    info_print(f"{function_name}")
+                    yield function_name
+                if len(function_args) > 0:
+                    collected_function_arguments_json_str += chunk_message['function_call']['arguments']
+                    collected_messages.append(chunk_message)
+                    ai_print(function_args, flush=True, end='')
+            else:
+                collected_messages.append(chunk_message)
+                content_ptr = chunk_message['content'] if 'content' in chunk_message else None
+                if content_ptr:
+                    yield content_ptr
+                    ai_print(content_ptr, flush=True, end='')
 
+    # start audio synthesis
+    init_step_var()
+    text_stream = gen()
+    if is_speak:
+        audio_stream = elevenlabs_client.generate(
+            text=text_stream,
+            voice="Bella",
+            stream=True,
+        )
+        elevenlabs_client.stream(audio_stream)
+    else:
+        for text in text_stream:
+            pass
     # check fc
     if len(collected_function_name) > 0:
         function_response, sysc = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
@@ -212,7 +240,10 @@ Your answer should be short.
             "name": collected_function_name,
         })
         if sysc != SYSC_SAY_NOTHING:
-            step("called function, now explain me about the function result.", is_fc=False)
+            step(
+                "called function, now explain me about the function result.",
+                is_fc=False
+            )
         return
 
     response_str = "".join([m.get('content', '') for m in collected_messages])

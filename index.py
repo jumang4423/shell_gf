@@ -13,12 +13,22 @@ def welcome_text():
 
 welcome_text()
 
+import argparse
 from src.ai.openai import step
 from src.ai.debug import debug_shell
 from src.ai.fc import fc_list
+
+# get args
+parser = argparse.ArgumentParser()
+parser.add_argument("--speak", help="speak the output", action="store_true")
+args = parser.parse_args()
+is_speak = args.speak
+assert isinstance(is_speak, bool)
+
 print()
 info_print(f"implemented functions list: {str(fc_list())}")
 warning_print("type 'debug' to enter debug shell.")
+
 while True:
     user_prompt = input("> ")
     try:
@@ -28,7 +38,7 @@ while True:
             debug_shell()
             continue
         user_print("* ", flush=True, end="")
-        step(user_prompt)
+        step(user_prompt, is_speak=is_speak)
     except Exception as e:
         error_print(f"! Error: {e}")
         print()

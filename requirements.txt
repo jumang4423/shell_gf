@@ -2,3 +2,4 @@ openai
 pinecone-client
 load_dotenv
 colored
+elevenlabs
