@@ -9,15 +9,13 @@ openai.api_key = OPENAI_API_KEY
 
 # export constants
 openai_client = openai
-GPT_3 = 'gpt-3.5-turbo-16k'
-GPT_4 = 'gpt-4-0613'
+GPT_3 = "gpt-3.5-turbo-16k"
+GPT_4 = "gpt-4-0613"
+JUMANGO = "ft:gpt-3.5-turbo-0613:saasis::7qknygYx"
 
 
 # export fn
-def summarize_arr(
-        conv_arr: list,
-        gpt_model: str
-) -> str:
+def summarize_arr(conv_arr: list, gpt_model: str) -> str:
     """
     summarize conversation array
     """
@@ -36,10 +34,7 @@ def summarize_arr(
     - both user and ai got angry.
     """
     messages = [
-        {
-            'role': "system",
-            'content': THIS_SYSTEM_PROMPT
-        },
+        {"role": "system", "content": THIS_SYSTEM_PROMPT},
     ]
     messages.extend(conv_arr)
     response = openai_client.ChatCompletion.create(

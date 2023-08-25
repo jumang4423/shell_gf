@@ -1,40 +1,47 @@
 import json
 import copy
 from typing import Optional
+
 # pinecone
 from src.ai.pinecone import (
     insert_to_pinecone,
     query_to_pinecone,
 )
+
 # fc
 from src.ai.fc import (
     function_mapping,
     function_struct,
     resolver,
     SYSC_EXIT,
-    SYSC_SAY_NOTHING
+    SYSC_SAY_NOTHING,
 )
+
 # openai
 from src.ai.openai_init import (
     openai_client,
     GPT_3,
     GPT_4,
+    JUMANGO,
     summarize_arr,
 )
+
 # print
 from src.ai.print import (
     ai_print,
     info_print,
     comment_print,
 )
+
 # elevenlabs
 from src.ai.elevenlabs_init import (
     elevenlabs_client,
 )
+
 # constants
-MAX_COV_ARR_LEN = 6 # more than this, summarization will be used
-MAX_COV_ARR_LEN_MARGIN = 8 # margin for summarization
-VDB_CACHE_PATH = './vdb_cache'
+MAX_COV_ARR_LEN = 6  # more than this, summarization will be used
+MAX_COV_ARR_LEN_MARGIN = 8  # margin for summarization
+VDB_CACHE_PATH = "./vdb_cache"
 
 # state
 cur_conv_mem = []
@@ -54,14 +61,9 @@ def summarizer():
         # remove first MAX_COV_ARR_LEN_MARGIN
         cur_conv_mem = cur_conv_mem[MAX_COV_ARR_LEN_MARGIN:]
         # append summarized to the first of cur_conv_mem
-        cur_conv_mem.insert(0, {
-            'role': 'assistant',
-            'content': summarized
-        })
+        cur_conv_mem.insert(0, {"role": "assistant", "content": summarized})
         # save to db
-        insert_to_pinecone(
-            summarized
-        )
+        insert_to_pinecone(summarized)
 
 
 def exec_sysc(sysc):
@@ -74,9 +76,7 @@ def on_exit():
     croped = cur_conv_mem[:-1]
     summarized = summarize_arr(croped, GPT_3)
     # save to db
-    insert_to_pinecone(
-        summarized
-    )
+    insert_to_pinecone(summarized)
     info_print("** memory saved. **")
     exit()
 
@@ -103,10 +103,11 @@ def gen_recall_query() -> Optional[str]:
     <ai recall query>
     {{ query: "about autism", is_query: true }}
     """
+
     messages = [
         {
-            'role': "system",
-            'content': THIS_SYSTEM_PROMPT
+            "role": "system",
+            "content": THIS_SYSTEM_PROMPT,
         },
     ]
     messages.extend(cur_conv_mem)
@@ -117,10 +118,10 @@ def gen_recall_query() -> Optional[str]:
     response_str = response.choices[0].message.content
 
     try:
-       json_obj = json.loads(response_str)
-       if json_obj['is_query']:
-            return json_obj['query']
-       else:
+        json_obj = json.loads(response_str)
+        if json_obj["is_query"]:
+            return json_obj["query"]
+        else:
             return None
     except:
         return None
@@ -129,8 +130,8 @@ def gen_recall_query() -> Optional[str]:
 def assert_function_struct(function_struct: list[dict], user_prompt: str):
     new_fs = copy.deepcopy(function_struct)
     # run_agi
-    if 'agi' not in user_prompt.lower():
-        new_fs = list(filter(lambda x: x['name'] != 'run_agi', new_fs))
+    if "agi" not in user_prompt.lower():
+        new_fs = list(filter(lambda x: x["name"] != "run_agi", new_fs))
 
     return new_fs
 
@@ -142,7 +143,7 @@ def init_step_var():
     collected_function_arguments_json_str = ""
 
 
-def step(user_prompt: str, is_fc=True, is_speak=False) -> str:
+def step(user_prompt: str, model: str, is_fc=True, is_speak=False) -> str:
     """
     step with user prompt
     """
@@ -155,11 +156,11 @@ You use an excessive amount of Kaomoji(顔文字) to express emotions, enough to
 Also, regardless of the inherent formality, you communicate in friendly manner.
 Your answer should be short.
 """
+    JUMANGO_SYSTEM_PROMPT = """
+    You are an chaotic INTP-A personality ai assistant called jumango. you are an chaotic INTP-A personality person called jumango, a hacker and musician as (@jumang4423) from japan.
+    """
     # add user message to cur_conv_mem
-    cur_conv_mem.append({
-        'role': 'user',
-        'content': user_prompt
-    })
+    cur_conv_mem.append({"role": "user", "content": user_prompt})
 
     summarizer()
 
@@ -167,59 +168,64 @@ Your answer should be short.
     if is_fc:
         query = user_prompt
         comment_print(f"recall query: {query}")
-        result = query_to_pinecone(
-            query
-        )
+        result = query_to_pinecone(query)
         comment_print(f"recall from memory: {result}")
     messages = [
         {
-            'role': "system",
-            'content': THIS_SYSTEM_PROMPT
+            "role": "system",
+            "content": JUMANGO_SYSTEM_PROMPT
+            if model == JUMANGO
+            else THIS_SYSTEM_PROMPT,
         },
     ]
     if is_fc and result:
-        messages.append({
-            'role': 'assistant',
-            'content': f"recall from memory: {result}"
-        })
+        messages.append(
+            {"role": "assistant", "content": f"recall from memory: {result}"}
+        )
     messages.extend(cur_conv_mem)
     assert_fs = assert_function_struct(function_struct, user_prompt)
 
-    def gen():
+    def gen(model):
         global collected_messages, collected_function_name, collected_function_arguments_json_str
-        response = openai_client.ChatCompletion.create(
-            model=GPT_4,
-            messages=messages,
-            stream=True,
-            function_call="auto" if is_fc else "none",
-            functions=assert_fs,
-        )
+        params = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+        }
+        if is_fc:
+            params["function_call"] = "auto" if is_fc else "none"
+            params["functions"] = assert_fs
+        response = openai_client.ChatCompletion.create(**params)
         for chunk in response:
-            finished_reason = chunk['choices'][0]['finish_reason']
+            finished_reason = chunk["choices"][0]["finish_reason"]
             if finished_reason == "function_call":
                 break
-            chunk_message = chunk['choices'][0]['delta']
+            chunk_message = chunk["choices"][0]["delta"]
             if "function_call" in chunk_message:
-                function_name = chunk_message['function_call'].get('name', '')
-                function_args = chunk_message['function_call'].get('arguments', '')
+                function_name = chunk_message["function_call"].get("name", "")
+                function_args = chunk_message["function_call"].get("arguments", "")
                 if len(function_name) > 0:
-                    collected_function_name += chunk_message['function_call']['name']
+                    collected_function_name += chunk_message["function_call"]["name"]
                     info_print(f"{function_name}")
                     yield function_name
                 if len(function_args) > 0:
-                    collected_function_arguments_json_str += chunk_message['function_call']['arguments']
+                    collected_function_arguments_json_str += chunk_message[
+                        "function_call"
+                    ]["arguments"]
                     collected_messages.append(chunk_message)
-                    ai_print(function_args, flush=True, end='')
+                    ai_print(function_args, flush=True, end="")
             else:
                 collected_messages.append(chunk_message)
-                content_ptr = chunk_message['content'] if 'content' in chunk_message else None
+                content_ptr = (
+                    chunk_message["content"] if "content" in chunk_message else None
+                )
                 if content_ptr:
                     yield content_ptr
-                    ai_print(content_ptr, flush=True, end='')
+                    ai_print(content_ptr, flush=True, end="")
 
     # start audio synthesis
     init_step_var()
-    text_stream = gen()
+    text_stream = gen(model)
     if is_speak:
         audio_stream = elevenlabs_client.generate(
             text=text_stream,
@@ -232,24 +238,27 @@ Your answer should be short.
             pass
     # check fc
     if len(collected_function_name) > 0:
-        function_response, sysc = resolver({}, collected_function_name, json.loads(collected_function_arguments_json_str))
+        function_response, sysc = resolver(
+            {},
+            collected_function_name,
+            json.loads(collected_function_arguments_json_str),
+        )
         exec_sysc(sysc)
-        cur_conv_mem.append({
-            'role': "function",
-            'content': function_response,
-            "name": collected_function_name,
-        })
+        cur_conv_mem.append(
+            {
+                "role": "function",
+                "content": function_response,
+                "name": collected_function_name,
+            }
+        )
         if sysc != SYSC_SAY_NOTHING:
             step(
                 "called function, now explain me about the function result.",
-                is_fc=False
+                is_fc=False,
             )
         return
 
-    response_str = "".join([m.get('content', '') for m in collected_messages])
-    cur_conv_mem.append({
-        'role': 'assistant',
-        'content': response_str
-    })
+    response_str = "".join([m.get("content", "") for m in collected_messages])
+    cur_conv_mem.append({"role": "assistant", "content": response_str})
 
     print()
